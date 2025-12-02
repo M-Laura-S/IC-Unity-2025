@@ -8,7 +8,6 @@ public class PlayerController : MonoBehaviour
 {
     //variables de movimiento, privadas
     float moveSpeed = 5f;
-    float rotationSpeed = 720f;
 
     //variables de vida y estamina, expuestas en Inspector
     [Header("Player Stats")]
@@ -84,7 +83,6 @@ public class PlayerController : MonoBehaviour
 
     void UpdateMovement()
     {
-        // --- Read movement input ---
         float horizontal = 0f;
         float vertical = 0f;
 
@@ -96,13 +94,9 @@ public class PlayerController : MonoBehaviour
             if (Keyboard.current.aKey.isPressed) horizontal -= 1f;
         }
 
-        bool hasInput = (horizontal != 0f || vertical != 0f);
-
         Vector3 moveDir = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
 
-
-        if (hasInput)
+        if (horizontal != 0f || vertical != 0f)
         {
             Vector3 camForward = mainCamera.transform.forward;
             Vector3 camRight = mainCamera.transform.right;
@@ -113,32 +107,31 @@ public class PlayerController : MonoBehaviour
             camForward.Normalize();
             camRight.Normalize();
 
-            moveDir = camForward * vertical + camRight * horizontal;
-
-            // normalize only when non-zero
-            if (moveDir.sqrMagnitude > 0f)
-                moveDir.Normalize();
+            moveDir = (camForward * vertical + camRight * horizontal).normalized;
         }
 
-        // Apply movement
-        rb.linearVelocity = moveDir * moveSpeed;
+        // apply movement WITHOUT overriding gravity
+        Vector3 currentVel = rb.linearVelocity;
 
-        // Apply rotation only when there is real input
-        /*if (hasInput && moveDir.sqrMagnitude > 0.0001f)
-        {
-            Quaternion targetRot = Quaternion.LookRotation(moveDir);
-            rb.MoveRotation(Quaternion.RotateTowards(
-                rb.rotation,
-                targetRot,
-                rotationSpeed * Time.deltaTime
-            ));
-        }*/
+        Vector3 newVelocity = new Vector3(
+            moveDir.x * moveSpeed,
+            currentVel.y,                 // preserve gravity
+            moveDir.z * moveSpeed
+        );
+
+        rb.linearVelocity = newVelocity;
+    }
+
+
+    private void FixedUpdate()
+    {
+        UpdateMovement();
     }
 
 
     void Update()
     {
-        UpdateMovement();
+        
 
         //Mostrar y actualizar valores de UI
         healthText.text = playerLife + " / " + playerLifeMax;
